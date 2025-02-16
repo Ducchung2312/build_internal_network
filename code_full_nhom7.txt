@@ -1,0 +1,716 @@
+1./ Cấu hình trunk giữa SW và SW layer3
+----------Toà A--------
+enable
+conf t
+hostname MS-A1
+int range fa0/3-4
+switchport trunk encap dot1q
+switchport mode trunk
+
+enable
+conf t
+hostname MS-A2
+int range fa0/3-4
+switchport trunk encap dot1q
+switchport mode trunk
+
+enable
+conf t
+hostname S1_A
+int range fa0/3-4
+switchport mode access 
+switchport mode trunk
+
+enable
+conf t
+hostname S2_A
+int range fa0/3-4
+switchport mode access 
+switchport mode trunk
+
+------------Toà B-------------
+
+enable
+conf t
+hostname MS-B1
+int range fa0/3-4
+switchport trunk encap dot1q
+switchport mode trunk
+
+enable
+conf t
+hostname MS-B2
+int range fa0/3-4
+switchport trunk encap dot1q
+switchport mode trunk
+
+enable
+conf t
+hostname S1_B
+int range fa0/3-4
+switchport mode access 
+switchport mode trunk
+
+enable
+conf t
+hostname S2_B
+int range fa0/3-4
+switchport mode access 
+switchport mode trunk
+
+--------Toà C-----------
+
+enable
+conf t
+hostname MS-C1
+int range fa0/3-4
+switchport trunk encap dot1q
+switchport mode trunk
+
+enable
+conf t
+hostname MS-C2
+int range fa0/3-4
+switchport trunk encap dot1q
+switchport mode trunk
+
+enable
+conf t
+hostname S1_C
+int range fa0/3-4
+switchport mode access 
+switchport mode trunk
+
+enable
+conf t
+hostname S2_C
+int range fa0/3-4
+switchport mode access 
+switchport mode trunk
+
+2./ Cấu hình Etherchannel giữa các SWL3
+MS-A1 & MS-A2
+Gộp hai đường link Ethernet lại thành đường logical để 
+tăng băng thông đường truyền
+
+----------Toà A-----------
+
+*MS-A1 & MS-A2
+int range gi0/1-2
+channel-group 1 mode on
+
+Cấu hình trunk cho 2 con MS này
+
+int range gi0/1-2
+switchport trunk encap dot1q
+switchport mode trunk 
+
+----------Toà B-----------
+
+*MS-B1 & MS-B2
+int range gi0/1-2
+channel-group 1 mode on
+
+Cấu hình trunk cho 2 con MS này
+
+int range gi0/1-2
+switchport trunk encap dot1q
+switchport mode trunk 
+
+----------Toà C-----------
+
+*MS-C1 & MS-C2
+
+int range gi0/1-2
+channel-group 1 mode on
+
+Cấu hình trunk cho 2 con MS này
+
+int range gi0/1-2
+switchport trunk encap dot1q
+switchport mode trunk 
+
+(kiểm tra Etherchannel bằng lệnh: show etherchannel summary)
+
+3./ Tạo VLAN và cấu hình VTP 
+với MS-A1 là server còn các SW khác là client 
+
+----------Toà A----------
+MS-A1
+vtp domain MS_vtp
+vtp mode server
+
+các Sw còn lại trong toà A
+vtp domain MS_vtp
+vtp mode client 
+
+*Tạo Vlan tại MS-A1
+vlan 10
+name p1.1
+exit 
+vlan 20
+name p1.2
+exit
+vlan 30
+name p1.3
+exit 
+vlan 40
+name p1.4
+exit 
+---------Toà B----------
+*MS-B1
+vtp domain MS_vtp_B
+vtp mode server
+
+các Sw còn lại trong toà B
+vtp domain MS_vtp_B
+vtp mode client 
+
+*Tạo Vlan tại MS-B1
+vlan 50
+name p2.1
+exit 
+vlan 60
+name p2.2
+exit
+vlan 70
+name p2.3
+exit 
+vlan 80
+name p2.4
+exit 
+----------Toà C--------
+*MS-C1
+vtp domain MS_vtp_C
+vtp mode server
+
+các Sw còn lại trong toà C
+vtp domain MS_vtp_C
+vtp mode client 
+
+*Tạo Vlan tại MS-C1
+vlan 90
+name p3.1
+exit 
+vlan 100
+name p3.2
+exit
+
+4./Gán port vào VLAN trên SW 
+enable
+conf t
+int fa0/1
+switchport access vlan 10
+exit
+int fa0/2
+switchport access vlan 20
+exit
+======> tương tự cho các SW ở 3 toàn nhà
+
+5./ Cấu hình STP (Spanning tree) và RSTP
+-----------Toà A----------
+MS-A1
+spanning-tree mode rapid
+spanning-tree vlan 10 root primary
+spanning-tree vlan 20 root primary
+spanning-tree vlan 30 root secondary
+spanning-tree vlan 40 root secondary
+MS-A2
+spanning-tree mode rapid
+spanning-tree vlan 10 root secondary
+spanning-tree vlan 20 root secondary
+spanning-tree vlan 30 root primary
+spanning-tree vlan 40 root primary
+---------Toà B------------
+MS-B1
+spanning-tree mode rapid
+spanning-tree vlan 10 root primary
+spanning-tree vlan 20 root primary
+spanning-tree vlan 30 root secondary
+spanning-tree vlan 40 root secondary
+MS-B2
+spanning-tree mode rapid
+spanning-tree vlan 10 root secondary
+spanning-tree vlan 20 root secondary
+spanning-tree vlan 30 root primary
+spanning-tree vlan 40 root primary
+----------Toà C-----------
+
+MS-C1
+spanning-tree mode rapid
+spanning-tree vlan 90 root primary
+spanning-tree vlan 100 root secondary
+
+MS-C2
+spanning-tree mode rapid
+spanning-tree vlan 90 root secondary
+spanning-tree vlan 100 root primary
+
+Các SW con 
+spanning-tree mode rapid
+
+6./ Cấu hình IP cho các interface SVI VLAN
+
+-----------Toà A----------
+MS-A1
+int vlan 10
+ip add 192.168.0.1 255.255.255.0
+no shut
+exit
+int vlan 20
+ip add 192.168.1.1 255.255.255.128
+no shut
+exit
+int vlan 30
+ip add 192.168.2.1 255.255.255.0
+no shut
+exit
+int vlan 40
+ip add 192.168.3.1 255.255.255.192
+no shut
+exit
+
+MS-A2
+int vlan 10
+ip add 192.168.0.2 255.255.255.0
+no shut
+exit
+int vlan 20
+ip add 192.168.1.2 255.255.255.128
+no shut
+exit
+int vlan 30
+ip add 192.168.2.2 255.255.255.0
+no shut
+exit
+int vlan 40
+ip add 192.168.3.2 255.255.255.192
+no shut
+exit
+
+---------Toà B----------
+
+MS-B1
+int vlan 50
+ip add 192.168.3.65 255.255.255.128
+no shut
+exit
+int vlan 60
+ip add 192.168.4.1 255.255.255.0
+no shut
+exit
+int vlan 70
+ip add 192.168.5.1 255.255.255.128
+no shut
+exit
+int vlan 80
+ip add 192.168.5.129 255.255.255.192
+no shut
+exit
+
+MS-B2
+int vlan 50
+ip add 192.168.3.66 255.255.255.128
+no shut
+exit
+int vlan 60
+ip add 192.168.4.2 55.255.255.0
+no shut
+exit
+int vlan 70
+ip add 192.168.5.2 255.255.255.128
+no shut
+exit
+int vlan 80
+ip add 192.168.5.130 255.255.255.192
+no shut
+exit
+---------Toà C----------
+MS-C1
+int vlan 90
+ip add 192.168.6.1 255.255.255.0
+no shut
+exit
+int vlan 100
+ip add 192.168.7.1 255.255.255.128
+no shut
+exit
+
+MS-C2
+int vlan 90
+ip add 192.168.6.2 255.255.255.0
+no shut
+exit
+int vlan 100
+ip add 192.168.7.2 255.255.255.128
+no shut
+exit
+
+6./ Cấu hình HSRP //Dự phòng gate để ra mạng Internet
+-------------Toà A------------
+MS-A1
+int vlan 10
+standby 10 ip 192.168.0.3
+standby 10 priority 105
+standby 10 preempt
+exit 
+int vlan 20
+standby 20 ip 192.168.1.3
+standby 20 priority 105
+standby 20 preempt
+exit
+int vlan 30
+standby 30 ip 192.168.2.3
+standby 30 preempt
+exit
+int vlan 40
+standby 40 ip 192.168.3.3
+standby 40 preempt
+
+int vlan 10
+standby 10 track fa0/1
+int vlan 20 
+standby 20 track fa0/1
+
+MS-A2
+int vlan 10
+standby 10 ip 192.168.0.3
+standby 10 priority 100
+standby 10 preempt
+exit 
+int vlan 20
+standby 20 ip 192.168.1.3
+standby 20 priority 100
+standby 20 preempt
+exit
+int vlan 30
+standby 30 ip 192.168.2.3
+standby 30 priority 105
+standby 30 preempt
+exit
+int vlan 40
+standby 40 ip 192.168.3.3
+standby 40 priority 105
+standby 40 preempt
+
+int vlan 30
+standby 30 track fa0/1
+int vlan 40 
+standby 30 track fa0/1
+
+--------------------Toà B---------------------
+MS-B1
+interface Vlan50
+ standby 50 ip 192.168.3.67
+ standby 50 priority 105
+ standby 50 preempt
+
+interface Vlan60
+ standby 60 ip 192.168.4.3
+ standby 60 priority 105
+ standby 60 preempt
+
+interface Vlan70
+ standby 70 ip 192.168.5.3
+ standby 70 preempt
+
+interface Vlan80
+ standby 80 ip 192.168.5.131
+ standby 80 preempt
+
+MS-B2
+interface Vlan50
+ standby 50 ip 192.168.3.67
+ standby 50 preempt
+
+interface Vlan60
+ standby 60 ip 192.168.4.3
+ standby 60 preempt
+
+interface Vlan70
+ standby 70 ip 192.168.5.3
+ standby 70 priority 105
+ standby 70 preempt
+
+interface Vlan80
+ standby 80 ip 192.168.5.131
+ standby 80 priority 105
+ standby 80 preempt
+
+-----------TÒA C-------------------
+MS-C1
+interface Vlan90
+ standby 90 ip 192.168.6.3
+ standby 90 priority 105
+ standby 90 preempt
+
+interface Vlan100
+ standby 100 ip 192.168.7.3
+ standby 100 preempt
+
+MS-C2
+interface Vlan90
+ standby 90 ip 192.168.6.3
+ standby 90 preempt
+
+interface Vlan100
+ standby 100 ip 192.168.7.3
+ standby 100 priority 105
+ standby 100 preempt
+
+
+7./Cấu hình DHCP server
+
+-----------Toà A-----------
+
+MS-A1 làm DHCP server cho VLAN 10 và 20
+
+ip dhcp pool VLAN_10
+network 192.168.0.0 255.255.255.0
+default-router 192.168.0.3
+dns-server 8.8.8.2
+ip dhcp pool VLAN_20
+network 192.168.1.0 255.255.255.128
+default-router 192.168.1.3
+dns-server 8.8.8.2
+
+MS-A2 làm DHCP server cho VLAN 30 và 40
+
+ip dhcp pool VLAN_30
+network 192.168.2.0 255.255.255.0
+default-router 192.168.2.3
+dns-server 8.8.8.2
+ip dhcp pool VLAN_40
+network 192.168.3.0 255.255.255.192
+default-router 192.168.3.3
+dns-server 8.8.8.2
+
+--------------Toà B-------------
+
+MS_B1 làm DHCP server cho VLAN 50 và 60
+
+ip dhcp pool VLAN_60
+ network 192.168.4.0 255.255.255.0
+ default-router 192.168.4.3
+ dns-server 8.8.8.2
+ip dhcp pool VLAN_50
+ network 192.168.3.64 255.255.255.128
+ default-router 192.168.3.67
+ dns-server 8.8.8.2
+
+MS_B2 làm DHCP server cho VLAN 70 và 80
+
+ip dhcp pool VLAN_70
+ network 192.168.5.0 255.255.255.128
+ default-router 192.168.5.3
+ dns-server 8.8.8.2
+ip dhcp pool VLAN_80
+ network 192.168.5.128 255.255.255.192
+ default-router 192.168.5.131
+ dns-server 8.8.8.2
+
+------------Toà C---------
+
+MS_C1 làm DHCP server cho VLAN 90
+
+ip dhcp pool VLAN_90
+ network 192.168.6.0 255.255.255.0
+ default-router 192.168.6.3
+ dns-server 8.8.8.2
+
+MS_C2 làm DHCP server cho VLAN 100
+
+ip dhcp pool VLAN_100
+ network 192.168.7.0 255.255.255.128
+ default-router 192.168.7.3
+ dns-server 8.8.8.2
+====================
+
+8./ Cấu hình OSPF
+
+R1
+
+router ospf 1
+ router-id 1.1.1.1
+ redistribute static 
+ network 196.168.3.0 0.0.0.3 area 0
+ network 196.168.1.0 0.0.0.3 area 0
+ network 172.16.1.0 0.0.0.3 area 0
+ network 172.16.2.0 0.0.0.3 area 0
+ default-information originate
+
+MS-A1
+router ospf 1
+ router-id 2.2.2.2
+ network 172.16.1.0 0.0.0.3 area 0
+ network 172.16.7.0 0.0.0.3 area 0
+ network 192.168.0.0 0.0.0.255 area 0
+ network 192.168.3.0 0.0.0.63 area 0
+ network 192.168.2.0 0.0.0.255 area 0
+ network 192.168.1.0 0.0.0.127 area 0
+
+MS-A2
+router ospf 1
+ router-id 3.3.3.3
+ network 172.16.2.0 0.0.0.3 area 0
+ network 172.16.7.0 0.0.0.3 area 0
+ network 192.168.0.0 0.0.0.255 area 0
+ network 192.168.3.0 0.0.0.63 area 0
+ network 192.168.2.0 0.0.0.255 area 0
+ network 192.168.1.0 0.0.0.127 area 0
+
+=========================================
+R2
+router ospf 1
+ router-id 4.4.4.4
+ redistribute static 
+ network 196.168.1.0 0.0.0.3 area 0
+ network 196.168.2.0 0.0.0.3 area 0
+ network 172.16.3.0 0.0.0.3 area 0
+ network 172.16.4.0 0.0.0.3 area 0
+ default-information originate
+
+MS_B1
+router ospf 1
+ router-id 5.5.5.5
+ network 172.16.3.0 0.0.0.3 area 0
+ network 172.16.8.0 0.0.0.3 area 0
+ network 192.168.3.0 0.0.0.127 area 0
+ network 192.168.4.0 0.0.0.255 area 0
+ network 192.168.5.0 0.0.0.127 area 0
+ network 192.168.5.128 0.0.0.63 area 0
+
+MS_B2
+router ospf 1
+ router-id 6.6.6.6
+ network 172.16.4.0 0.0.0.3 area 0
+ network 172.16.8.0 0.0.0.3 area 0
+ network 192.168.3.0 0.0.0.127 area 0
+ network 192.168.4.0 0.0.0.255 area 0
+ network 192.168.5.0 0.0.0.127 area 0
+ network 192.168.5.128 0.0.0.63 area 0
+===========================================
+R3
+router ospf 1
+ router-id 7.7.7.7
+ redistribute static 
+ network 196.168.3.0 0.0.0.3 area 0
+ network 196.168.2.0 0.0.0.3 area 0
+ network 172.16.5.0 0.0.0.3 area 0
+ network 172.16.6.0 0.0.0.3 area 0
+ default-information originate
+
+MS-C1
+router ospf 1
+ router-id 8.8.8.8
+ log-adjacency-changes
+ network 172.16.5.0 0.0.0.3 area 0
+ network 172.16.9.0 0.0.0.3 area 0
+ network 192.168.6.0 0.0.0.255 area 0
+ network 192.168.7.0 0.0.0.127 area 0
+
+MS-C2
+en
+conf t
+router ospf 1
+router-id 9.9.9.9
+network 172.16.6.0 0.0.0.3 area 0
+network 172.16.9.0 0.0.0.3 area 0
+network 192.168.6.0 0.0.0.255 area 0
+network 192.168.7.0 0.0.0.127 area 0
+
+9./ Cấu hình NAT
+R1
+access-list 1 permit any
+ip nat inside source list 1 interface se0/0/0 overload
+int se0/0/0
+ip nat outside
+exit 
+int se0/0/1
+ip nat inside
+exit
+int se0/1/0
+ip nat inside
+exit
+int Gi0/0
+ip nat inside
+exit
+int Gi0/1
+ip nat inside
+
+R2
+access-list 1 permit any
+ip nat inside source list 1 interface se0/0/0 overload
+int se0/0/0
+ip nat outside
+exit 
+int se0/1/0
+ip nat inside
+exit
+int se0/1/1
+ip nat inside
+exit
+int Gi0/0
+ip nat inside
+exit
+int Gi0/1
+ip nat inside
+
+R3
+access-list 1 permit any
+ip nat inside source list 1 interface se0/0/0 overload
+int se0/0/0
+ip nat outside
+exit 
+int se0/1/1
+ip nat inside
+exit
+int se0/0/1
+ip nat inside
+exit
+int Gi0/0
+ip nat inside
+exit
+int Gi0/1
+ip nat inside
+
+
+10./ Cấu hình Telnet & SSH 
+Sử dụng để truy cập vào giao diện dòng lệnh của
+thiết bị từ xa
+(Đặt các câu lệnh này trên Router và các SW layer 3)
+hostname R2
+
+ip domain-name nhombay.com
+crypto key generate rsa
+1024                     
+username admin secret cisco
+enable secret cisco
+line vty 0 4             
+transport input ssh
+login local
+ip ssh version 2
+exit 
+
+ 
+11./ Cấu hình ACL
+ACL chỉ cho phép các Vlan 10 60 90 có thể truy cập được 
+các Router core
+
+*R1 R2 R3
+access-list 2 permit 192.168.0.0 0.0.0.255
+access-list 2 permit 192.168.4.0 0.0.0.255
+access-list 2 permit 192.168.6.0 0.0.0.255
+line vty 0 4 
+access-class 2 in
+
+Cấu hình DNS 
+trên sever DNS tạo 1 DNS có tên là nhombay.com 
+với ip là địa chỉ của mail sever 8.8.8.3
+-----
+Cấu hình syslog 
+R1 R2 R3
+service timestamps log datetime msec
+logging 8.8.8.3
+logging on
+ 
